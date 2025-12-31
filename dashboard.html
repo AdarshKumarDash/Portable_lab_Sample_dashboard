@@ -1,0 +1,133 @@
+<!-- templates/dashboard.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Eco-Synth Spectrum — Dashboard</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="static\style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <h1>Eco-Synth Spectrum</h1>
+      <small>Portable Lab • User Dashboard</small>
+    </div>
+    <nav class="topnav">
+      <a href="F:\ATL projects\Eco-Synth Spectrum\Web\templates\index.html" class="btn small">Logout</a>
+    </nav>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <div class="row">
+        <div class="col">
+          <h2>Welcome, Adarsh<!--{{ user['name'] }}--></h2>
+          <p><strong>Product ID:</strong> EXS-2025-XXXXX <!--{{ user['product_id'] }}--> &nbsp; <strong>Email:</strong> adarsh.dps.2020@gmail.com <!--{{ user['email'] }}--></p>
+          <p><strong>Last experiment:</strong> .No experiment saved yet <!--{{ user['last_experiment'] or 'No experiment saved yet' }}--></p>
+        </div>
+        <div class="col">
+          <div class="status-cards">
+            <div class="status-card">
+              <strong>Fan</strong>
+              <span>Idle</span>
+            </div>
+            <div class="status-card">
+              <strong>Sprayer</strong>
+              <span>Ready</span>
+            </div>
+            <div class="status-card">
+              <strong>Battery</strong>
+              <span>85%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3>Live (Demo) Sensor Charts</h3>
+      <div class="grid-2">
+        <div>
+          <canvas id="tempChart"></canvas>
+        </div>
+        <div>
+          <canvas id="phChart"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3>Run / Save Experiment (Demo)</h3>
+      <p>Use the controls below to simulate an experiment and save a short note as your last experiment (stored in DB).</p>
+      <div class="controls">
+        <input id="expName" placeholder="Brief experiment title (e.g. Heat test A)">
+        <textarea id="expNote" placeholder="Notes about the experiment..." rows="3"></textarea>
+        <button id="saveExpBtn" class="btn primary">Save experiment</button>
+        <div id="saveResult" class="muted"></div>
+      </div>
+    </section>
+
+    <footer class="card">
+      <p>Dashboard demo — data is simulated for now. In production, connect sensors and replace demo data with live feeds.</p>
+    </footer>
+  </main>
+
+  <script>
+    // demo data injected from Flask
+//const demoTemp = {{ demo_temp|default([])|tojson }};
+//const demoHum = {{ demo_humidity|default([])|tojson }};
+//const demoPH = {{ demo_ph|default([])|tojson }};
+
+
+
+    // Temp chart
+    const tctx = document.getElementById('tempChart').getContext('2d');
+    new Chart(tctx, {
+      type: 'line',
+      data: {
+        labels: ['-6h','-5h','-4h','-3h','-2h','-1h','now'],
+        datasets: [
+          { label: 'Temperature (°C)', data: demoTemp, borderColor: '#e85d04', tension: 0.3, fill:false },
+          { label: 'Humidity (%)', data: demoHum, borderColor: '#4361ee', tension: 0.3, fill:false, yAxisID: 'y2' }
+        ]
+      },
+      options: {
+        scales: {
+          y: { beginAtZero:false },
+          y2: { position: 'right', beginAtZero:false }
+        }
+      }
+    });
+
+    // pH chart
+    const phctx = document.getElementById('phChart').getContext('2d');
+    new Chart(phctx, {
+      type: 'bar',
+      data: {
+        labels: ['t-6','t-5','t-4','t-3','t-2','t-1','now'],
+        datasets: [{ label: 'pH', data: demoPH, backgroundColor: '#2a9d8f' }]
+      },
+      options: { scales: { y: { suggestedMin:5.5, suggestedMax:8 } } }
+    });
+
+    // Save experiment (AJAX)
+    document.getElementById('saveExpBtn').addEventListener('click', async () => {
+      const title = document.getElementById('expName').value.trim();
+      const note = document.getElementById('expNote').value.trim();
+      if (!title) { alert('Enter an experiment title'); return; }
+      const payload = { experiment: title + (note ? (' — ' + note) : '') };
+      const res = await fetch("/save_experiment", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
+      });
+      const j = await res.json();
+      if (j.ok) {
+        document.getElementById('saveResult').innerText = "Saved: " + j.saved;
+      } else {
+        document.getElementById('saveResult').innerText = "Save failed.";
+      }
+    });
+  </script>
+</body>
+</html>
